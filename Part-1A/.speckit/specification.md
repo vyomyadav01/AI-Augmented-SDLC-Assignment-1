@@ -1,19 +1,22 @@
 # Feature Specification: Smart Todo & Task CLI
 
 ## Requirements
-1. Task CRUD Operations:
-   - add <title> [--tags t1,t2] [--priority low|med|high]: Task create karega sequential ID ke sath. Default status pending.
-   - list [--status pending|done] [--tag <tag>] [--sort priority|id]: Filtered aur sorted tasks print karega.
-   - update <id> [--status pending|done] [--priority low|med|high]: Task fields update karega.
-   - delete <id>: Specified task delete karega.
-2. JSON Persistence:
-   - Data tasks.json file me structured format me persist hoga.
-3. Deterministic Exit Codes:
-   - 0: Successful execution.
-   - 1: Validation error / non-existent task ID / invalid argument.
+
+### 1. Task CRUD Operations:
+- `add <title> [--tags t1,t2] [--priority low|med|high]`: Creates a task with a sequential integer ID. Default status is `pending`.
+- `list [--status pending|done] [--tag ] [--sort priority|id]`: Displays filtered and sorted tasks.
+- `update [--status pending|done] [--priority low|med|high]`: Updates designated task attributes.
+- `delete `: Removes the specified task from the store.
+
+### 2. JSON Persistence:
+- Task records must persist in structured format within `tasks.json`.
+
+### 3. Deterministic Exit Codes:
+- `0`: Successful execution.
+- `1`: Validation error, non-existent task ID, or invalid argument.
 
 ## Acceptance Criteria
-- AC-1: Empty title dene par CLI error output aur exit code 1 dega.
-- AC-2: Existing tasks ko tag aur status dono ke basis par filter kiya ja sakega.
-- AC-3: Priority sorting strictly high > med > low order follow karegi.
-- AC-4: Non-existent ID par update ya delete call karne par exit code 1 aayega.
+- **AC1**: Adding a task must save it immediately with status `pending`.
+- **AC2**: Filter by status and tag must return exact matches.
+- **AC3**: Sorting by priority must strictly follow ordering: `HIGH > MED > LOW`.
+- **AC4**: Updating a non-existent task must exit with code 1 and return a descriptive error.
