@@ -1,5 +1,6 @@
 # Clarifications
-- Q1: Task ID format kya hoga?
-  - Resolution: Sequential integer IDs (1, 2, 3...) use honge.
-- Q2: Storage file missing hone par kya behavior hoga?
-  - Resolution: Agar tasks.json exist nahi karti, to system empty list se start karega aur save par file create karega.
+
+- **Q1: What is the format for Task IDs?**
+  - **Resolution**: Sequential integer IDs (1, 2, 3...) must be used.
+- **Q2: What is the expected behavior when the storage file is missing?**
+  - **Resolution**: If `tasks.json` does not exist, the system initializes with an empty list and creates the file upon saving.

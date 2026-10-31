@@ -2,7 +2,7 @@ import json
 import sys
 from pathlib import Path
 
-# Script ke location se base path set karein
+# Resolve base project directory relative to script path
 base_dir = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(base_dir))
 
@@ -46,13 +46,13 @@ def run_evaluation():
             # Layer 2: Invariants / Property Validation
             if output.needs_clarification and not output.clarification_question:
                 layer_errors.append(
-                    "Layer 2 Failed: Clarification true hai par question null hai"
+                    "Layer 2 Failed: Clarification is true but question is null"
                 )
                 case_passed = False
 
             if not output.needs_clarification and not output.title:
                 layer_errors.append(
-                    "Layer 2 Failed: Clarification false hone par title null hai"
+                    "Layer 2 Failed: Clarification is false but title is null"
                 )
                 case_passed = False
 
