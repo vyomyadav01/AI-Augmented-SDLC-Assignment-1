@@ -1,22 +1,28 @@
 import argparse
-from src.storage import TaskStorage
+from .storage import TaskStorage
+from .models import Priority, Status
 
-def main(args=None):
+def main():
     parser = argparse.ArgumentParser(description="Smart Todo CLI")
-    parser.add_argument("command", nargs="?", choices=["add", "delete", "list"])
-    parser.add_argument("target_id", nargs="?", type=int)
-    parser.add_argument("--db", default="tasks.json")
-    parsed = parser.parse_args(args)
+    subparsers = parser.add_subparsers(dest="command")
 
-    storage = TaskStorage(parsed.db)
-    if parsed.command == "delete" and parsed.target_id:
-        tasks = storage.load_all()
-        new_tasks = [t for t in tasks if t.id != parsed.target_id]
-        if len(new_tasks) == len(tasks):
-            return 1
-        storage.save_all(new_tasks)
-        return 0
-    return 0
+    add_parser = subparsers.add_parser("add")
+    add_parser.add_argument("title", type=str)
+    add_parser.add_argument("--tags", type=str, default="")
+    add_parser.add_argument("--priority", choices=["low", "med", "high"], default="low")
+
+    args = parser.parse_args()
+    storage = TaskStorage()
+
+    if args.command == "add":
+        tasks = storage.load_tasks()
+        new_id = len(tasks) + 1
+        tags = [t.strip() for t in args.tags.split(",") if t.strip()]
+        new_task = Task(id=new_id, title=args.title, tags=tags, priority=Priority(args.priority))
+        tasks.append(new_task)
+        storage.save_tasks(tasks)
+        print(f"Task {new_id} added successfully.")
+        exit(0)
 
 if __name__ == "__main__":
-    exit(main())
+    main()
