@@ -1,31 +1,36 @@
 import json
 from pathlib import Path
-from src.models import Task, Priority
+from typing import List
+from .models import Task, Priority, Status
 
 class TaskStorage:
-    def __init__(self, filepath: str = "tasks.json"):
-        self.filepath = Path(filepath)
+    def __init__(self, file_path: str = "tasks.json"):
+        self.file_path = Path(file_path)
 
-    def load_all(self) -> list:
-        if not self.filepath.exists():
+    def load_tasks(self) -> List[Task]:
+        if not self.file_path.exists():
             return []
-        with open(self.filepath, "r", encoding="utf-8") as f:
+        with open(self.file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-            return [Task.from_dict(d) for d in data]
+            return [
+                Task(
+                    id=item["id"],
+                    title=item["title"],
+                    tags=item.get("tags", []),
+                    priority=Priority(item.get("priority", "low")),
+                    status=Status(item.get("status", "pending"))
+                )
+                for item in data
+            ]
 
-    def save_all(self, tasks: list):
-        with open(self.filepath, "w", encoding="utf-8") as f:
-            json.dump([t.to_dict() for t in tasks], f, indent=2)
+    def save_tasks(self, tasks: List[Task]) -> None:
+        with open(self.file_path, "w", encoding="utf-8") as f:
+            json.dump([task.__dict__ for task in tasks], f, indent=2)
 
-    def list_tasks(self, tag: str = None, status: str = None, sort_by: str = "id") -> list:
-        tasks = self.load_all()
-        if tag:
-            tasks = [t for t in tasks if tag in t.tags]
-        if status:
-            tasks = [t for t in tasks if t.status == status]
+    def get_sorted_tasks(self, sort_by: str = "id") -> List[Task]:
+        tasks = self.load_tasks()
         if sort_by == "priority":
-            priority_map = {Priority.LOW: 1, Priority.MED: 2, Priority.HIGH: 3}
-            tasks.sort(key=lambda t: priority_map[t.priority])
-        else:
-            tasks.sort(key=lambda t: t.id)
-        return tasks
+            # Buggy initial logic: LOW first instead of HIGH first
+            priority_order = {Priority.LOW: 1, Priority.MED: 2, Priority.HIGH: 3}
+            return sorted(tasks, key=lambda t: priority_order.get(t.priority, 4))
+        return sorted(tasks, key=lambda t: t.id)
