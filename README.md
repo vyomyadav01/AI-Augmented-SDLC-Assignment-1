@@ -1,11 +1,24 @@
-# Assignment 1 - Spec-Driven Development & Harness Engineering
+# AI-Augmented SDLC Assignment 1
+**Student Name:** Vyom Yadav
+**Student ID:** 2026ns93132
 
-This repository contains two projects demonstrating Specification-Driven Development (SDD) and automated test harnesses:
-- **Part-1A**: Deterministic Smart Todo CLI with Lint, Security (SAST), and Unit test gates.
-- **Part-1B**: Non-Deterministic Natural-Language Reminder Agent with a 3-layer evaluation pipeline (Schema, Invariants, Semantic Quality).
+## How to Run Harnesses
 
-## Environment Setup
+### 1. Setup
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 pip install ruff bandit pytest pydantic
+```
+
+### 2. Part 1A Deterministic Harness
+```bash
+ruff check Part-1A/
+bandit -r Part-1A/src/
+pytest Part-1A/tests/
+```
+
+### 3. Part 1B Non-Deterministic Evaluation Pipeline
+```bash
+python3 Part-1B/.harness/run_eval.py
+```
