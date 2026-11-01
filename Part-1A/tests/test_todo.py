@@ -1,7 +1,8 @@
 import pytest
-from src.models import Task, Priority
-from src.storage import TaskStorage
 from src.cli import main
+from src.models import Priority, Task
+from src.storage import TaskStorage
+
 
 def test_ac1_empty_title_rejection():
     with pytest.raises(ValueError):
