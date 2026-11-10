@@ -1,11 +1,12 @@
 import argparse
 import sys
 from pathlib import Path
-# Ensure Part-1A is on sys.path for direct invocations
+
+# Ensure Part-1A is on sys.path for direct invocation from any directory
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-    from src.models import Priority, Task
-    from src.storage import TaskStorage
+from src.models import Priority, Task
+from src.storage import TaskStorage
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -13,21 +14,25 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--db", default="tasks.json", help="Path to database file")
     subparsers = parser.add_subparsers(dest="command")
 
+    # add <title> [--tags t1,t2] [--priority low|med|high]
     add_parser = subparsers.add_parser("add")
     add_parser.add_argument("title", type=str)
     add_parser.add_argument("--tags", type=str, default="")
     add_parser.add_argument("--priority", choices=["low", "med", "high"], default="low")
 
+    # list [--status pending|done] [--tag TAG] [--sort priority|id]
     list_parser = subparsers.add_parser("list")
     list_parser.add_argument("--status", choices=["pending", "done"], default=None)
     list_parser.add_argument("--tag", type=str, default=None)
     list_parser.add_argument("--sort", choices=["priority", "id"], default="id")
 
+    # update <target_id> [--status pending|done] [--priority low|med|high]
     update_parser = subparsers.add_parser("update")
     update_parser.add_argument("target_id", type=int)
     update_parser.add_argument("--status", choices=["pending", "done"], default=None)
     update_parser.add_argument("--priority", choices=["low", "med", "high"], default=None)
 
+    # delete <target_id>
     del_parser = subparsers.add_parser("delete")
     del_parser.add_argument("target_id", type=int)
 
@@ -44,6 +49,7 @@ def main(args: list[str] | None = None) -> int:
 
     storage = TaskStorage(parsed.db)
 
+    try:
         if parsed.command == "add":
             tasks = storage.load_all()
             next_id = max([t.id for t in tasks], default=0) + 1
