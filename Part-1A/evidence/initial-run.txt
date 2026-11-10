@@ -1,0 +1,38 @@
+============================ test session starts ===========================0
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0 -- /home/vyom/Assignment-1/venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/vyom/Assignment-1
+configfile: pyproject.toml
+plugins: anyio-4.16.0
+collecting ... collected 5 items
+
+Part-1A/tests/test_todo.py::test_ac1_task_saved_with_pending_status PASSED [ 20%]
+Part-1A/tests/test_todo.py::test_ac2_filter_by_tag_and_status PASSED      [ 40%]
+Part-1A/tests/test_todo.py::test_ac3_priority_sorting FAILED              [ 60%]
+Part-1A/tests/test_todo.py::test_ac4_invalid_id_exit_code PASSED          [ 80%]
+Part-1A/tests/test_todo.py::test_validation_empty_title_rejection PASSED  [100%]
+
+================================== FAILURES ================================
+_________________________ test_ac3_priority_sorting ________________________
+
+tmp_path = PosixPath('/tmp/pytest-of-vyom/pytest-0/test_ac3_priority_sorting0*')
+
+    def test_ac3_priority_sorting(tmp_path):
+        db_file = tmp_path / "tasks.json"
+        storage = TaskStorage(str(db_file))
+        t_low = Task(id=1, title="Low", priority=Priority.LOW)
+        t_high = Task(id=2, title="High", priority=Priority.HIGH)
+        t_med = Task(id=3, title="Med", priority=Priority.MED)
+        storage.save_tasks([t_low, t_high, t_med])
+
+        sorted_tasks = storage.get_sorted_tasks(sort_by="priority")
+        priorities = [t.priority.value for t in sorted_tasks]
+>       assert priorities == ["high", "med", "low"]
+E       AssertionError: assert ['low', 'med', 'high'] == ['high', 'med', 'low']
+E         At index 0 diff: 'low' != 'high'
+E         Full diff:
+E         - ['high', 'med', 'low']
+E         + ['low', 'med', 'high']
+
+Part-1A/tests/test_todo.py:38: AssertionError
+=========================== 1 failed, 4 passed in 0.04s ==========================

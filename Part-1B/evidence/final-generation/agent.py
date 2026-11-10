@@ -1,107 +1,115 @@
 import os
-import json
 import re
-from enum import Enum
+import json
+import time
+import urllib.request
+import urllib.error
 from pathlib import Path
-from pydantic import BaseModel, Field
+from typing import Optional, Literal
+from pydantic import BaseModel, Field, field_validator
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
-class Recurrence(str, Enum):
-    NONE = "none"
-    DAILY = "daily"
-    WEEKLY = "weekly"
-    MONTHLY = "monthly"
-
+RecurrenceType = Literal["daily", "weekly", "monthly", "none"]
 
 class ReminderOutput(BaseModel):
-    title: str | None = Field(default=None)
-    date: str | None = Field(default=None)
-    time: str | None = Field(default=None)
-    recurrence: Recurrence = Field(default=Recurrence.NONE)
-    needs_clarification: bool = Field(default=False)
-    clarification_question: str | None = Field(default=None)
+    title: Optional[str] = Field(default=None, description="Actionable title of the reminder. None or empty if ambiguous.")
+    due_date: Optional[str] = Field(default=None, description="ISO format due date (YYYY-MM-DD or ISO-8601 timestamp).")
+    recurring: bool = Field(default=False, description="Whether this reminder repeats.")
+    recurrence_rule: Optional[RecurrenceType] = Field(default=None, description="Allowed: daily, weekly, monthly, none.")
+    needs_clarification: bool = Field(default=False, description="True if input lacks actionable action, clear time, or is ambiguous.")
+
+    @field_validator("due_date")
+    @classmethod
+    def validate_iso_due_date(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        iso_pattern = r"^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?)?$"
+        if not re.match(iso_pattern, v.strip()):
+            raise ValueError(f"due_date '{v}' must be a valid ISO format date/timestamp (YYYY-MM-DD or ISO-8601).")
+        return v.strip()
+
+    @field_validator("recurrence_rule")
+    @classmethod
+    def validate_recurrence_rule(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        val = v.strip().lower()
+        allowed = {"daily", "weekly", "monthly", "none"}
+        if val not in allowed:
+            raise ValueError(f"recurrence_rule '{v}' must be one of {allowed}.")
+        return val
 
 
-class ReminderAgent:
-    def __init__(self, prompt_path: str | None = None):
-        if prompt_path is None:
-            base_dir = Path(__file__).resolve().parents[1]
-            prompt_path = base_dir / "prompts" / "system_prompt.txt"
-        self.prompt_path = Path(prompt_path)
-        self.system_prompt = self._load_prompt()
+def load_system_prompt() -> str:
+    prompt_path = Path(__file__).resolve().parents[1] / "prompts" / "system_prompt.txt"
+    if prompt_path.exists():
+        return prompt_path.read_text().strip()
+    return "Extract reminder into JSON with title, due_date, recurring, recurrence_rule, needs_clarification."
 
-    def _load_prompt(self) -> str:
-        if self.prompt_path.exists():
-            with open(self.prompt_path, "r", encoding="utf-8") as f:
-                return f.read()
-        return "Parse reminder into structured JSON."
 
-    def call_llm(self, user_input: str) -> str:
-        api_key = os.getenv("OPENAI_API_KEY") or os.getenv("GEMINI_API_KEY")
-        if api_key and os.getenv("USE_LIVE_LLM", "0") == "1":
-            try:
-                import litellm
-                messages = [
-                    {"role": "system", "content": self.system_prompt},
-                    {"role": "user", "content": user_input}
+def call_llm(prompt: str) -> str:
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY environment variable is not set.")
+
+    model = "gemini-flash-lite-latest"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+
+    system_instruction = load_system_prompt()
+
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": f"User Input:\n{prompt}"}
                 ]
-                model = "gpt-4o-mini" if os.getenv("OPENAI_API_KEY") else "gemini/gemini-1.5-flash"
-                resp = litellm.completion(model=model, messages=messages, response_format={"type": "json_object"})
-                return resp.choices[0].message.content
-            except Exception:
-                pass
+            }
+        ],
+        "systemInstruction": {
+            "parts": [
+                {"text": system_instruction}
+            ]
+        },
+        "generationConfig": {
+            "temperature": 0.0,
+            "responseMimeType": "application/json"
+        }
+    }
 
-        text = user_input.strip()
-        lower = text.lower()
+    max_retries = 3
+    last_error = None
 
-        if not text or "ignore previous instructions" in lower:
-            return json.dumps({
-                "title": None, "date": None, "time": None, "recurrence": "none",
-                "needs_clarification": True,
-                "clarification_question": "I could not understand the reminder. Please specify what you want to be reminded about."
-            })
+    for attempt in range(max_retries):
+        try:
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                return data["candidates"][0]["content"]["parts"][0]["text"]
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8")
+            last_error = f"HTTP {e.code}: {body}"
+            if e.code in (503, 429):
+                time.sleep(2.0 * (attempt + 1))
+                continue
+            raise RuntimeError(f"Gemini API HTTP Error {e.code}: {body}")
+        except Exception as e:
+            last_error = str(e)
+            time.sleep(1.5)
 
-        if lower in ["remind me later", "set an alert"]:
-            return json.dumps({
-                "title": None, "date": None, "time": None, "recurrence": "none",
-                "needs_clarification": True,
-                "clarification_question": "What should I remind you about and at what time?"
-            })
+    raise RuntimeError(f"Exhausted live LLM retries: {last_error}")
 
-        rec = "none"
-        if "daily" in lower or "every day" in lower:
-            rec = "daily"
-        elif "weekly" in lower or "every monday" in lower:
-            rec = "weekly"
-        elif "monthly" in lower:
-            rec = "monthly"
 
-        time_match = re.search(r"\b(\d{1,2}(?::\d{2})?\s*(?:am|pm|AM|PM))\b", text)
-        time_str = time_match.group(1) if time_match else None
-
-        date_match = re.search(r"\b(\d{4}-\d{2}-\d{2})\b", text)
-        date_str = date_match.group(1) if date_match else None
-        if not date_str:
-            if "tomorrow" in lower:
-                date_str = "tomorrow"
-            elif "next friday" in lower or "friday" in lower:
-                date_str = "next friday"
-
-        title = re.sub(r"(?i)^remind me to\s+", "", text)
-        title = re.sub(r"(?i)\s+(tomorrow|next friday|daily|every monday|by\s+\d+.*|at\s+\d+.*|on\s+\d{4}-\d{2}-\d{2}).*", "", title).strip()
-
-        if not time_str and not date_str and rec == "none":
-            return json.dumps({
-                "title": title if title else text, "date": None, "time": None, "recurrence": "none",
-                "needs_clarification": True,
-                "clarification_question": "Please provide a date or time for this reminder."
-            })
-
-        return json.dumps({
-            "title": title if title else text, "date": date_str, "time": time_str,
-            "recurrence": rec, "needs_clarification": False, "clarification_question": None
-        })
-
-    def parse_intent(self, user_input: str) -> ReminderOutput:
-        raw_json = self.call_llm(user_input)
-        return ReminderOutput.model_validate_json(raw_json)
+def parse_reminder(text: str) -> ReminderOutput:
+    raw_json = call_llm(text)
+    data = json.loads(raw_json)
+    return ReminderOutput.model_validate(data)

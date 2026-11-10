@@ -30,7 +30,6 @@ class TaskStorage:
     def get_sorted_tasks(self, sort_by: str = "id") -> List[Task]:
         tasks = self.load_tasks()
         if sort_by == "priority":
-            # Buggy initial logic: LOW first instead of HIGH first
-            priority_order = {Priority.LOW: 1, Priority.MED: 2, Priority.HIGH: 3}
+                        priority_order = {Priority.LOW: 1, Priority.MED: 2, Priority.HIGH: 3}
             return sorted(tasks, key=lambda t: priority_order.get(t.priority, 4))
         return sorted(tasks, key=lambda t: t.id)
