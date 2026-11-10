@@ -1,0 +1,13 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0 -- /home/vyom/Assignment-1/venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/vyom/Assignment-1
+collecting ... collected 5 items
+
+Part-1A/tests/test_todo.py::test_ac1_task_saved_with_pending_status PASSED [ 20%]
+Part-1A/tests/test_todo.py::test_ac2_filter_by_tag_and_status PASSED     [ 40%]
+Part-1A/tests/test_todo.py::test_ac3_priority_sorting PASSED             [ 60%]
+Part-1A/tests/test_todo.py::test_ac4_invalid_id_exit_code PASSED         [ 80%]
+Part-1A/tests/test_todo.py::test_validation_empty_title_rejection PASSED [100%]
+
+============================== 5 passed in 0.02s ===============================
