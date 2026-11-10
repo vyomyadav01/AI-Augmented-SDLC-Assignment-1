@@ -1,12 +1,11 @@
 import argparse
 import sys
+from pathlib import Path
+# Ensure Part-1A is on sys.path for direct invocations
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-try:
     from src.models import Priority, Task
     from src.storage import TaskStorage
-except ModuleNotFoundError:
-    from models import Priority, Task
-    from storage import TaskStorage
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -45,7 +44,6 @@ def main(args: list[str] | None = None) -> int:
 
     storage = TaskStorage(parsed.db)
 
-    try:
         if parsed.command == "add":
             tasks = storage.load_all()
             next_id = max([t.id for t in tasks], default=0) + 1
