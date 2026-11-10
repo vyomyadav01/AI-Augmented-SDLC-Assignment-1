@@ -1,8 +1,12 @@
 import argparse
 import sys
 
-from src.models import Priority, Task
-from src.storage import TaskStorage
+try:
+    from src.models import Priority, Task
+    from src.storage import TaskStorage
+except ModuleNotFoundError:
+    from models import Priority, Task
+    from storage import TaskStorage
 
 
 def build_parser() -> argparse.ArgumentParser:
